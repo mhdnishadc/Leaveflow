@@ -1,0 +1,11 @@
+const mongoose = require("mongoose");
+
+const UserSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String },  // Will be empty for Google OAuth users
+  role: { type: String, enum: ["user", "admin"], default: "user" },
+  googleId: { type: String },  // For Google authentication
+});
+
+module.exports = mongoose.model("User", UserSchema);
