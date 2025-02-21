@@ -5,6 +5,7 @@ const User = require("../models/User");
 const passport = require("passport");
 const cors = require("cors"); // Add this import
 require("../config/passport"); // Google Auth setup
+const authMiddleware = require("../middleware/authMiddleware"); 
 const router = express.Router();
 
 // Signup Route
@@ -70,5 +71,35 @@ router.get("/google/callback", passport.authenticate("google", { session: false 
     res.status(500).json({ message: "Google Authentication failed" });
   }
 });
+
+
+// 🟢 Fetch User Info (Protected Route)
+router.get("/dashboard", async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (error) {
+    console.error("Dashboard error:", error);
+    res.status(401).json({ message: "Invalid token" });
+  }
+});
+router.get("/dashboard", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("name email"); // Fetch only necessary fields
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
 
 module.exports = router;

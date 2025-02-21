@@ -1,32 +1,71 @@
 import React, { useState } from "react";
 import { Form, Button, Container, Row, Col } from "react-bootstrap";
 import DatePicker from "react-datepicker";
+import axios from "axios";
+import {jwtDecode} from "jwt-decode"; // Install this package: npm install jwt-decode
 
 const ApplyLeave = () => {
-  // State for form fields
   const [leaveType, setLeaveType] = useState("");
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [reason, setReason] = useState("");
   const [file, setFile] = useState(null);
 
-  // Handle file upload
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
   };
 
-  // Handle form submission
-  const handleSubmit = (event) => {
+
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    console.log({
-      leaveType,
-      startDate,
-      endDate,
-      reason,
-      file,
-    });
-    alert("Leave request submitted!");
+  
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("You must be logged in to apply for leave.");
+      return;
+    }
+  
+    const decodedToken = jwtDecode(token);
+    const userId = decodedToken.id;
+  
+    // ✅ Convert dates to the correct format
+    const formattedStartDate = new Date(startDate).toISOString().split("T")[0];
+    const formattedEndDate = new Date(endDate).toISOString().split("T")[0];
+  
+    // ✅ JSON request body
+    const requestBody = {
+      userId: userId,
+      leaveType: leaveType,
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      reason: reason,
+    };
+  
+    try {
+      const response = await axios.post("http://localhost:5000/api/leave/apply", requestBody, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (response.status === 201) {
+        alert("Leave request submitted successfully!");
+        setLeaveType("");
+        setStartDate(null);
+        setEndDate(null);
+        setReason("");
+        setFile(null);
+      }
+    } catch (error) {
+      console.error("Error submitting leave request:", error);
+      alert("Failed to submit leave request. Please try again.");
+    }
   };
+  
+  
+  
 
   return (
     <Container className="mt-4">
@@ -35,7 +74,6 @@ const ApplyLeave = () => {
           <h3 className="text-center mb-4">Apply for Leave</h3>
           <Form onSubmit={handleSubmit} className="shadow p-4 rounded">
             
-            {/* Leave Type Dropdown */}
             <Form.Group controlId="leaveType" className="mb-3">
               <Form.Label>Leave Type</Form.Label>
               <Form.Select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} required>
@@ -47,7 +85,6 @@ const ApplyLeave = () => {
               </Form.Select>
             </Form.Group>
 
-            {/* Date Range Picker */}
             <Row className="mb-3">
               <Col>
                 <Form.Group controlId="startDate">
@@ -73,7 +110,6 @@ const ApplyLeave = () => {
               </Col>
             </Row>
 
-            {/* Reason for Leave */}
             <Form.Group controlId="reason" className="mb-3">
               <Form.Label>Reason for Leave</Form.Label>
               <Form.Control
@@ -85,13 +121,11 @@ const ApplyLeave = () => {
               />
             </Form.Group>
 
-            {/* File Upload */}
             <Form.Group controlId="fileUpload" className="mb-3">
               <Form.Label>Attach Document (Optional)</Form.Label>
               <Form.Control type="file" onChange={handleFileChange} />
             </Form.Group>
 
-            {/* Submit Button */}
             <Button variant="primary" type="submit" className="w-100">
               Submit Leave Request
             </Button>

@@ -1,20 +1,37 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Table, Badge } from "react-bootstrap";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const leaveSummary = {
-    balance: 12,
-    pending: 2,
-    approved: 8,
-  };
+  const [user, setUser] = useState({});
+  const navigate = useNavigate();
 
-  const recentRequests = [
-    { type: "Sick Leave", date: "2024-02-10", status: "Approved" },
-    { type: "Casual Leave", date: "2024-02-12", status: "Pending" },
-    { type: "Annual Leave", date: "2024-02-20", status: "Rejected" },
-  ];
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        const { data } = await axios.get("http://localhost:5000/api/auth/dashboard", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        setUser(data);
+        navigate("/dashboard");
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -33,45 +50,24 @@ const Dashboard = () => {
     <div className="d-flex">
       <Sidebar />
       <div className="content" style={{ marginLeft: "250px", width: "100%" }}>
-        <Header />
+      <Header user={user} />
         <Container className="mt-4">
           <Row>
-            {/* Summary Cards */}
-            <Col md={4}>
-              <Card className="shadow p-3">
-                <h5>Leave Balance</h5>
-                <h2>{leaveSummary.balance} Days</h2>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card className="shadow p-3">
-                <h5>Pending Requests</h5>
-                <h2>{leaveSummary.pending}</h2>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card className="shadow p-3">
-                <h5>Approved Leaves</h5>
-                <h2>{leaveSummary.approved}</h2>
-              </Card>
-            </Col>
+            <Col md={4}><Card className="shadow p-3"><h5>Leave Balance</h5><h2>{user.leaveBalance} Days</h2></Card></Col>
+            <Col md={4}><Card className="shadow p-3"><h5>Pending Requests</h5><h2>{user.pendingRequests}</h2></Card></Col>
+            <Col md={4}><Card className="shadow p-3"><h5>Approved Leaves</h5><h2>{user.approvedLeaves}</h2></Card></Col>
           </Row>
 
-          {/* Recent Leave Requests Table */}
           <Row className="mt-4">
             <Col>
               <Card className="shadow p-3">
                 <h5>Recent Leave Requests</h5>
                 <Table striped bordered hover responsive>
                   <thead>
-                    <tr>
-                      <th>Leave Type</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                    </tr>
+                    <tr><th>Leave Type</th><th>Date</th><th>Status</th></tr>
                   </thead>
                   <tbody>
-                    {recentRequests.map((req, index) => (
+                    {user.recentRequests?.map((req, index) => (
                       <tr key={index}>
                         <td>{req.type}</td>
                         <td>{req.date}</td>
