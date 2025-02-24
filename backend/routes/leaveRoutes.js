@@ -41,24 +41,24 @@ router.post("/apply", async (req, res) => {
 });
 
 
-// Get All Leave Requests (For Dashboard)
-router.get("/all", async (req, res) => {
-  try {
-    const leaveRequests = await LeaveRequest.find().populate("userId", "name email");
-    res.json(leaveRequests);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// // Get All Leave Requests (For Dashboard)
+// router.get("/all", async (req, res) => {
+//   try {
+//     const leaveRequests = await LeaveRequest.find().populate("userId", "name email");
+//     res.json(leaveRequests);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
-// Get Leave Requests for Specific User
-router.get("/user/:userId", async (req, res) => {
-  try {
-    const leaveRequests = await LeaveRequest.find({ userId: req.params.userId });
-    res.json(leaveRequests);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// // Get Leave Requests for Specific User
+// router.get("/user/:userId", async (req, res) => {
+//   try {
+//     const leaveRequests = await LeaveRequest.find({ userId: req.params.userId });
+//     res.json(leaveRequests);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
 module.exports = router;

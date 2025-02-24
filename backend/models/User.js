@@ -9,13 +9,7 @@ const UserSchema = new mongoose.Schema({
   leaveBalance: { type: Number, default: 12 },
   pendingRequests: { type: Number, default: 0 },
   approvedLeaves: { type: Number, default: 0 },
-  recentRequests: [
-    {
-      type: { type: String },
-      date: { type: String },
-      status: { type: String, enum: ["Approved", "Pending", "Rejected"] },
-    },
-  ],
 });
 
 module.exports = mongoose.model("User", UserSchema);
+

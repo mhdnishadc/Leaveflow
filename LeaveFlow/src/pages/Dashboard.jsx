@@ -6,7 +6,12 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
-  const [user, setUser] = useState({});
+  const [user, setUser] = useState({
+    leaveBalance: 0,
+    pendingRequests: 0,
+    approvedLeaves: 0,
+    recentRequests: [],
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,16 +22,16 @@ const Dashboard = () => {
           navigate("/login");
           return;
         }
+        console.log("Token found:", token);
 
         const { data } = await axios.get("http://localhost:5000/api/auth/dashboard", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
+        console.log("Fetched User Data:", data);
         setUser(data);
-        navigate("/dashboard");
       } catch (error) {
         console.error("Error fetching user data:", error);
-        
       }
     };
 
@@ -50,7 +55,7 @@ const Dashboard = () => {
     <div className="d-flex">
       <Sidebar />
       <div className="content" style={{ marginLeft: "250px", width: "100%" }}>
-      <Header user={user} />
+        <Header user={user} />
         <Container className="mt-4">
           <Row>
             <Col md={4}><Card className="shadow p-3"><h5>Leave Balance</h5><h2>{user.leaveBalance} Days</h2></Card></Col>
@@ -64,16 +69,28 @@ const Dashboard = () => {
                 <h5>Recent Leave Requests</h5>
                 <Table striped bordered hover responsive>
                   <thead>
-                    <tr><th>Leave Type</th><th>Date</th><th>Status</th></tr>
+                    <tr>
+                      <th>Leave Type</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                    </tr>
                   </thead>
                   <tbody>
-                    {user.recentRequests?.map((req, index) => (
-                      <tr key={index}>
-                        <td>{req.type}</td>
-                        <td>{req.date}</td>
-                        <td>{getStatusBadge(req.status)}</td>
+                    {user.recentRequests.length > 0 ? (
+                      user.recentRequests.map((req, index) => (
+                        <tr key={index}>
+                          <td>{req.type || "N/A"}</td>
+                          <td>{req.date || "N/A"}</td>
+                          <td>{getStatusBadge(req.status)}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="text-center">
+                          No leave requests found
+                        </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </Table>
               </Card>

@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const LeaveRequest = require("../models/LeaveRequest"); // Ensure this line is present
 const passport = require("passport");
 const cors = require("cors"); // Add this import
 require("../config/passport"); // Google Auth setup
@@ -72,34 +73,68 @@ router.get("/google/callback", passport.authenticate("google", { session: false 
   }
 });
 
-
-// 🟢 Fetch User Info (Protected Route)
-router.get("/dashboard", async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.json(user);
-  } catch (error) {
-    console.error("Dashboard error:", error);
-    res.status(401).json({ message: "Invalid token" });
-  }
-});
 router.get("/dashboard", authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("name email"); // Fetch only necessary fields
+    console.log("User ID from middleware:", req.user.id); // Debugging
+
+    // Fetch user details
+    const user = await User.findById(req.user.id);
+
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json(user);
+    // Fetch recent leave requests for this user from LeaveRequests collection
+    const leaveRequests = await LeaveRequest.find({ userId: req.user.id })
+      .sort({ createdAt: -1 }) // Sort by latest requests
+      .limit(5); // Limit to last 5 requests
+
+    // Prepare response data
+    res.json({
+      name: user.name,
+      email: user.email,
+      leaveBalance: user.leaveBalance || 0,
+      pendingRequests: leaveRequests.filter(req => req.status === "Pending").length,
+      approvedLeaves: leaveRequests.filter(req => req.status === "Approved").length,
+      recentRequests: leaveRequests.map(req => ({
+        type: req.leaveType, // Fetch leave type
+        date: new Date(req.startDate).toISOString().split("T")[0], // Format date
+        status: req.status // Fetch status
+      }))
+    });
   } catch (error) {
+    console.error("Dashboard error:", error);
     res.status(500).json({ message: "Server Error" });
   }
 });
+
+
+
+// // 🟢 Fetch User Info (Protected Route)
+// router.get("/dashboard", async (req, res) => {
+//   try {
+//     const token = req.headers.authorization?.split(" ")[1];
+//     if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     const user = await User.findById(decoded.id).select("-password");
+
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     res.json(user);
+//   } catch (error) {
+//     console.error("Dashboard error:", error);
+//     res.status(401).json({ message: "Invalid token" });
+//   }
+// });
+// router.get("/dashboard", authMiddleware, async (req, res) => {
+//   try {
+//     const user = await User.findById(req.user.id).select("name email"); // Fetch only necessary fields
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     res.json(user);
+//   } catch (error) {
+//     res.status(500).json({ message: "Server Error" });
+//   }
+// });
 
 
 module.exports = router;
