@@ -1,6 +1,8 @@
 const express = require("express");
 const multer = require("multer");
 const LeaveRequest = require("../models/LeaveRequest");
+const authMiddleware = require("../middleware/authMiddleware"); 
+
 
 const router = express.Router();
 
@@ -41,16 +43,35 @@ router.post("/apply", async (req, res) => {
 });
 
 
-// // Get All Leave Requests (For Dashboard)
-// router.get("/all", async (req, res) => {
-//   try {
-//     const leaveRequests = await LeaveRequest.find().populate("userId", "name email");
-//     res.json(leaveRequests);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
+// Get all leave requests for logged-in user
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const leaveRequests = await LeaveRequest.find({ userId: req.user.id });
+    res.json(leaveRequests);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+});
 
+// Cancel a leave request (Only if status is pending)
+router.put("/:id/cancel", authMiddleware, async (req, res) => {
+  try {
+    const leaveRequest = await LeaveRequest.findById(req.params.id);
+    if (!leaveRequest) return res.status(404).json({ message: "Leave request not found" });
+
+    if (leaveRequest.status !== "Pending") {
+      return res.status(400).json({ message: "Only pending requests can be cancelled" });
+    }
+
+    leaveRequest.status = "Cancelled";
+    await leaveRequest.save();
+    res.json({ message: "Leave request cancelled", leaveRequest });
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+});
+
+module.exports = router;
 // // Get Leave Requests for Specific User
 // router.get("/user/:userId", async (req, res) => {
 //   try {
@@ -61,4 +82,4 @@ router.post("/apply", async (req, res) => {
 //   }
 // });
 
-module.exports = router;
+

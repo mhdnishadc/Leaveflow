@@ -9,6 +9,8 @@ const UserSchema = new mongoose.Schema({
   leaveBalance: { type: Number, default: 12 },
   pendingRequests: { type: Number, default: 0 },
   approvedLeaves: { type: Number, default: 0 },
+  profileImage: { type: String, default: "" },
+  department: { type: String, default: "" },  // Add department field
 });
 
 module.exports = mongoose.model("User", UserSchema);

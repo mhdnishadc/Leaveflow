@@ -7,7 +7,16 @@ const passport = require("passport");
 const cors = require("cors"); // Add this import
 require("../config/passport"); // Google Auth setup
 const authMiddleware = require("../middleware/authMiddleware"); 
+const multer = require("multer");
+const verifyToken = require("../middleware/authMiddleware");
 const router = express.Router();
+require("dotenv").config(); 
+const cloudinary = require("../config/cloudinaryConfig");
+const upload = require("../middleware/multer");
+const DataUriParser = require("datauri/parser");
+const path = require("path");
+ 
+const parser = new DataUriParser();
 
 // Signup Route
 router.post("/signup", async (req, res) => {
@@ -54,7 +63,7 @@ router.use(cors({ origin: "http://localhost:5173", credentials: true }));
 // Google OAuth Route
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
-router.get("/google/callback", passport.authenticate("google", { session: false }), async (req, res) => {
+router.post("/google/callback", passport.authenticate("google", { session: false }), async (req, res) => {
   const { name, email, id } = req.user;
 
   try {
@@ -105,36 +114,58 @@ router.get("/dashboard", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 });
+ 
+// Upload Profile Image Route
+router.post("/upload-profile", verifyToken, upload.single("profileImage"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
 
+    // Convert buffer to Data URI
+    const fileExt = path.extname(req.file.originalname).toString();
+    const file64 = parser.format(fileExt, req.file.buffer);
 
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(file64.content);
 
-// // 🟢 Fetch User Info (Protected Route)
-// router.get("/dashboard", async (req, res) => {
-//   try {
-//     const token = req.headers.authorization?.split(" ")[1];
-//     if (!token) return res.status(401).json({ message: "Unauthorized" });
+    // ✅ Store Cloudinary URL in MongoDB (Update User Profile)
+    const userId = req.user.id; // Get logged-in user ID from token
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profileImage: result.secure_url }, // Save Cloudinary URL in DB
+      { new: true }
+    );
 
-//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-//     const user = await User.findById(decoded.id).select("-password");
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-//     if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({
+      success: true,
+      message: "Profile image uploaded and saved",
+      imageUrl: result.secure_url, // Return the Cloudinary image URL
+    });
+  } catch (error) {
+    console.error("❌ Cloudinary Upload Error:", error);
+    res.status(500).json({ success: false, message: "Upload failed", error: error.message });
+  }
+});
 
-//     res.json(user);
-//   } catch (error) {
-//     console.error("Dashboard error:", error);
-//     res.status(401).json({ message: "Invalid token" });
-//   }
-// });
-// router.get("/dashboard", authMiddleware, async (req, res) => {
-//   try {
-//     const user = await User.findById(req.user.id).select("name email"); // Fetch only necessary fields
-//     if (!user) return res.status(404).json({ message: "User not found" });
+router.get("/upload-profile", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("name email profileImage");
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-//     res.json(user);
-//   } catch (error) {
-//     res.status(500).json({ message: "Server Error" });
-//   }
-// });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+});
 
 
 module.exports = router;
+
+
+
+

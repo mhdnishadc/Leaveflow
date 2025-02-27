@@ -1,18 +1,17 @@
-import React, { useState } from "react";
-import { Container, Card, Row, Col, ProgressBar, Form, Button } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { Container, Card, Row, Col, ProgressBar, Form, Button, Alert } from "react-bootstrap";
+import axios from "axios"; // Make sure to import axios
 
 const Profile = () => {
-  // Sample User Data
-  const user = {
-    name: "John Doe",
-    email: "johndoe@example.com",
-    department: "Software Engineering",
-    leaveBalance: 10, // Total leave balance
-    leaveUsed: 4, // Leave used
-  };
+  // State for user data (this will be fetched from API)
+  const [user, setUser] = useState("");
 
   // State for profile picture
   const [profileImage, setProfileImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
 
   // State for password change
   const [passwords, setPasswords] = useState({
@@ -21,15 +20,85 @@ const Profile = () => {
     confirmPassword: "",
   });
 
-  // Handle profile image upload
+  // Fetch user data on component mount
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+  
+    if (token) {
+      axios
+        .get("http://localhost:5000/api/auth/upload-profile", {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(response => {
+          setUser(response.data);
+          
+          // If profileImage exists, set it for display
+          if (response.data.profileImage) {
+            setPreviewImage(response.data.profileImage);
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching user data:", error);
+        });
+    }
+  }, []);
+  
+
+  // Handle profile image selection
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setProfileImage(file);
+      
+      // Preview image
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfileImage(reader.result);
+        setPreviewImage(reader.result);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle image upload to server
+  const uploadProfileImage = async () => {
+    if (!profileImage) return;
+    
+    setUploading(true);
+    setUploadError("");
+    setUploadSuccess("");
+    
+    // Get token from localStorage
+    const token = localStorage.getItem("token");
+    
+    if (!token) {
+      setUploadError("You must be logged in to upload an image");
+      setUploading(false);
+      return;
+    }
+    
+    // Create form data for the file upload
+    const formData = new FormData();
+    formData.append("profileImage", profileImage);
+    
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/upload-profile",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      setUploadSuccess("Profile image uploaded successfully!");
+      setUser({...user, profileImage: response.data.profileImage});
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      setUploadError(error.response?.data?.error || "Failed to upload image");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -52,6 +121,10 @@ const Profile = () => {
   return (
     <Container className="mt-4">
       <h2 className="mb-4 text-primary">Profile</h2>
+      
+      {uploadError && <Alert variant="danger">{uploadError}</Alert>}
+      {uploadSuccess && <Alert variant="success">{uploadSuccess}</Alert>}
+      
       <Row>
         {/* User Info Card */}
         <Col md={4}>
@@ -59,7 +132,7 @@ const Profile = () => {
             <div className="profile-image-container">
               {/* Display Profile Image or Default */}
               <img
-                src={profileImage || "https://via.placeholder.com/150"}
+                src={previewImage || "https://via.placeholder.com/150"}
                 alt="Profile"
                 className="rounded-circle border border-2"
                 width="150"
@@ -74,27 +147,45 @@ const Profile = () => {
               {/* Upload Profile Picture */}
               <Form.Group className="mt-3">
                 <Form.Label className="btn btn-outline-primary">
-                  Upload Profile Picture
-                  <input type="file" accept="image/*" hidden onChange={handleImageUpload} />
+                  Select Profile Picture
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    hidden 
+                    onChange={handleImageUpload} 
+                  />
                 </Form.Label>
               </Form.Group>
+              
+              {profileImage && (
+                <Button 
+                  variant="success" 
+                  className="mt-2 w-100" 
+                  onClick={uploadProfileImage}
+                  disabled={uploading}
+                >
+                  {uploading ? "Uploading..." : "Upload Profile Picture"}
+                </Button>
+              )}
             </Card.Body>
           </Card>
         </Col>
 
         {/* Leave Balance Section & Password Change */}
         <Col md={8}>
-          <Card className="shadow-lg mb-4">
+          {/* <Card className="shadow-lg mb-4">
             <Card.Body>
               <h5>Leave Balance</h5>
               <ProgressBar
-                now={(user.leaveUsed / user.leaveBalance) * 100}
-                label={`${user.leaveUsed} / ${user.leaveBalance} Days Used`}
+                now={(user.
+                  leaveBalance / user.leaveBalance) * 100}
+                label={`${user.
+                  leaveBalance} / ${user.leaveBalance} Days Used`}
                 variant="info"
                 className="mt-2"
               />
             </Card.Body>
-          </Card>
+          </Card> */}
 
           {/* Change Password Form */}
           <Card className="shadow-lg">
@@ -147,4 +238,3 @@ const Profile = () => {
 };
 
 export default Profile;
-
