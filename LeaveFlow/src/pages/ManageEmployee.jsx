@@ -1,16 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Card, Table, Button, Form, Modal } from "react-bootstrap";
 import AdminSidebar from "../components/AdminSidebar";
+import axios from "axios";
+
+const API_URL = "http://localhost:5000/api/employees"; // Backend URL
 
 const ManageEmployee = () => {
-  const [employees, setEmployees] = useState([
-    { id: 1, name: "John Doe", department: "HR", email: "john@example.com" },
-    { id: 2, name: "Jane Smith", department: "Finance", email: "jane@example.com" },
-    { id: 3, name: "Mike Johnson", department: "Engineering", email: "mike@example.com" },
-  ]);
-
+  const [employees, setEmployees] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [currentEmployee, setCurrentEmployee] = useState(null);
+  const [currentEmployee, setCurrentEmployee] = useState({ name: "", department: "", email: "" });
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      const token = localStorage.getItem("token"); // Ensure token is stored in localStorage
+  
+      if (!token) {
+        console.error("❌ No token found in request headers.");
+        return;
+      }
+  
+      try {
+        const res = await axios.get(API_URL, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+  
+        setEmployees(res.data);
+      } catch (error) {
+        console.error("Error fetching employees", error.response?.data || error);
+      }
+    };
+  
+    fetchEmployees();
+  }, []);
+  
 
   // Open Edit Modal
   const handleEdit = (employee) => {
@@ -24,15 +46,30 @@ const ManageEmployee = () => {
   };
 
   // Save Edited Employee
-  const handleSave = () => {
-    setEmployees(employees.map(emp => (emp.id === currentEmployee.id ? currentEmployee : emp)));
-    setShowModal(false);
+  const handleSave = async () => {
+    try {
+      if (currentEmployee._id) {
+        await axios.put(`${API_URL}/${currentEmployee._id}`, currentEmployee);
+        setEmployees(employees.map(emp => (emp._id === currentEmployee._id ? currentEmployee : emp)));
+      } else {
+        const res = await axios.post(API_URL, currentEmployee);
+        setEmployees([...employees, res.data]);
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error("Error saving employee", err);
+    }
   };
-
-  // Remove Employee
-  const handleRemove = (id) => {
-    setEmployees(employees.filter((emp) => emp.id !== id));
+  
+  const handleRemove = async (id) => {
+    try {
+      await axios.delete(`${API_URL}/${id}`);
+      setEmployees(employees.filter(emp => emp._id !== id)); // Fix: Use `_id` instead of `id`
+    } catch (err) {
+      console.error("Error removing employee", err);
+    }
   };
+  
 
   return (
     <div className="d-flex">
@@ -54,7 +91,7 @@ const ManageEmployee = () => {
               </thead>
               <tbody>
                 {employees.map((emp) => (
-                  <tr key={emp.id}>
+                  <tr key={emp._id}>
                     <td>{emp.name}</td>
                     <td>{emp.department}</td>
                     <td>{emp.email}</td>
@@ -62,7 +99,7 @@ const ManageEmployee = () => {
                       <Button variant="primary" size="sm" className="me-2" onClick={() => handleEdit(emp)}>
                          Edit
                       </Button>
-                      <Button variant="danger" size="sm" onClick={() => handleRemove(emp.id)}>
+                      <Button variant="danger" size="sm" onClick={() => handleRemove(emp._id)}>
                         Remove
                       </Button>
                     </td>
@@ -79,45 +116,24 @@ const ManageEmployee = () => {
             <Modal.Title>Edit Employee</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            {currentEmployee && (
-              <Form>
-                <Form.Group className="mb-3">
-                  <Form.Label>Name</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="name"
-                    value={currentEmployee.name}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>Department</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="department"
-                    value={currentEmployee.department}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>Email</Form.Label>
-                  <Form.Control
-                    type="email"
-                    name="email"
-                    value={currentEmployee.email}
-                    onChange={handleChange}
-                  />
-                </Form.Group>
-              </Form>
-            )}
+            <Form>
+              <Form.Group className="mb-3">
+                <Form.Label>Name</Form.Label>
+                <Form.Control type="text" name="name" value={currentEmployee.name} onChange={handleChange} />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Department</Form.Label>
+                <Form.Control type="text" name="department" value={currentEmployee.department} onChange={handleChange} />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Email</Form.Label>
+                <Form.Control type="email" name="email" value={currentEmployee.email} onChange={handleChange} />
+              </Form.Group>
+            </Form>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
-              Close
-            </Button>
-            <Button variant="success" onClick={handleSave}>
-              Save Changes
-            </Button>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+            <Button variant="success" onClick={handleSave}>Save Changes</Button>
           </Modal.Footer>
         </Modal>
       </Container>

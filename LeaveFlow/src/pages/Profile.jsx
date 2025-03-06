@@ -4,7 +4,7 @@ import axios from "axios"; // Make sure to import axios
 
 const Profile = () => {
   // State for user data (this will be fetched from API)
-  const [user, setUser] = useState("");
+  const [user, setUser] = useState({});
 
   // State for profile picture
   const [profileImage, setProfileImage] = useState(null);
@@ -12,6 +12,7 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
+  const [department, setDepartment] = useState("");
 
   // State for password change
   const [passwords, setPasswords] = useState({
@@ -22,34 +23,36 @@ const Profile = () => {
 
   // Fetch user data on component mount
   useEffect(() => {
-    const token = localStorage.getItem("token");
-  
-    if (token) {
-      axios
-        .get("http://localhost:5000/api/auth/upload-profile", {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        .then(response => {
-          setUser(response.data);
-          
-          // If profileImage exists, set it for display
-          if (response.data.profileImage) {
-            setPreviewImage(response.data.profileImage);
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching user data:", error);
-        });
-    }
-  }, []);
-  
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    axios
+      .get("http://localhost:5000/api/auth/upload-profile", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(response => {
+        setUser(response.data);
+        setDepartment(response.data.department || ""); // Set department state
+
+        // If profileImage exists, set it for display
+        if (response.data.profileImage) {
+          setPreviewImage(response.data.profileImage);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching user data:", error);
+      });
+  }
+}, []);
+
+
 
   // Handle profile image selection
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       setProfileImage(file);
-      
+
       // Preview image
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -62,24 +65,24 @@ const Profile = () => {
   // Handle image upload to server
   const uploadProfileImage = async () => {
     if (!profileImage) return;
-    
+
     setUploading(true);
     setUploadError("");
     setUploadSuccess("");
-    
+
     // Get token from localStorage
     const token = localStorage.getItem("token");
-    
+
     if (!token) {
       setUploadError("You must be logged in to upload an image");
       setUploading(false);
       return;
     }
-    
+
     // Create form data for the file upload
     const formData = new FormData();
     formData.append("profileImage", profileImage);
-    
+
     try {
       const response = await axios.post(
         "http://localhost:5000/api/auth/upload-profile",
@@ -91,9 +94,9 @@ const Profile = () => {
           }
         }
       );
-      
+
       setUploadSuccess("Profile image uploaded successfully!");
-      setUser({...user, profileImage: response.data.profileImage});
+      setUser({ ...user, profileImage: response.data.profileImage });
     } catch (error) {
       console.error("Error uploading image:", error);
       setUploadError(error.response?.data?.error || "Failed to upload image");
@@ -117,14 +120,32 @@ const Profile = () => {
       setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
     }
   };
+  const handleDepartmentUpdate = async () => {
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/update-department",
+        { department },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert(response.data.message);
+      setUser({ ...user, department });
+      setDepartment("");
+    } catch (error) {
+      console.error("Error updating department:", error);
+      alert(error.response?.data?.error || "Failed to update department");
+    }
+  };
 
   return (
     <Container className="mt-4">
       <h2 className="mb-4 text-primary">Profile</h2>
-      
+
       {uploadError && <Alert variant="danger">{uploadError}</Alert>}
       {uploadSuccess && <Alert variant="success">{uploadSuccess}</Alert>}
-      
+
       <Row>
         {/* User Info Card */}
         <Col md={4}>
@@ -148,19 +169,19 @@ const Profile = () => {
               <Form.Group className="mt-3">
                 <Form.Label className="btn btn-outline-primary">
                   Select Profile Picture
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    hidden 
-                    onChange={handleImageUpload} 
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handleImageUpload}
                   />
                 </Form.Label>
               </Form.Group>
-              
+
               {profileImage && (
-                <Button 
-                  variant="success" 
-                  className="mt-2 w-100" 
+                <Button
+                  variant="success"
+                  className="mt-2 w-100"
                   onClick={uploadProfileImage}
                   disabled={uploading}
                 >
@@ -227,6 +248,19 @@ const Profile = () => {
 
                 <Button variant="primary" type="submit" className="w-100">
                   Update Password
+                </Button>
+
+                {/* Department Section */}
+                <Form.Group className="mb-3">
+                  <Form.Label>Department</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                  />
+                </Form.Group>
+                <Button variant="info" className="w-100" onClick={handleDepartmentUpdate}>
+                  Update Department
                 </Button>
               </Form>
             </Card.Body>

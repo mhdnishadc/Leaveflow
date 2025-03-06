@@ -1,28 +1,85 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Card, Table, Button } from "react-bootstrap";
+import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
 
-
-
 const AdminDashboard = () => {
-  const stats = { totalEmployees: 120, pendingRequests: 5, approvedLeaves: 30, rejectedLeaves: 10 };
-  const [leaveRequests, setLeaveRequests] = useState([
-    { id: 1, name: "Alice", type: "Casual", date: "2025-02-10", status: "Pending" },
-    { id: 2, name: "Bob", type: "Sick", date: "2025-02-12", status: "Pending" },
-    { id: 3, name: "Charlie", type: "Maternity", date: "2025-01-20", status: "Approved" },
-    { id: 4, name: "David", type: "Casual", date: "2025-01-25", status: "Rejected" },
-  ]);
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [stats, setStats] = useState({ totalEmployees: 0, pendingRequests: 0, approvedLeaves: 0, rejectedLeaves: 0 });
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      axios
+        .get("http://localhost:5000/api/admin/leave-requests", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((response) => {
+          setLeaveRequests(response.data);
+
+          // Compute stats dynamically
+          const totalEmployees = response.data.length;
+          const pendingRequests = response.data.filter((req) => req.status === "Pending").length;
+          const approvedLeaves = response.data.filter((req) => req.status === "Approved").length;
+          const rejectedLeaves = response.data.filter((req) => req.status === "Rejected").length;
+
+          setStats({ totalEmployees, pendingRequests, approvedLeaves, rejectedLeaves });
+        })
+        .catch((error) => console.error("Error fetching leave requests:", error));
+    }
+  }, []);
+
+  // const handleAction = (id, newStatus) => {
+  //   const token = localStorage.getItem("token");
+
+  //   axios
+  //     .put(
+  //       `http://localhost:5000/api/admin/leave-requests/${id}`,
+  //       { status: newStatus },
+  //       { headers: { Authorization: `Bearer ${token}` } }
+  //     )
+  //     .then((response) => {
+  //       setLeaveRequests(leaveRequests.map((req) => (req.id === id ? response.data : req)));
+  //     })
+  //     .catch((error) => console.error("Error updating leave request:", error));
+  // };
   const handleAction = (id, newStatus) => {
-    setLeaveRequests(leaveRequests.map((req) => (req.id === id ? { ...req, status: newStatus } : req)));
+    const token = localStorage.getItem("token");
+  
+    axios
+      .put(
+        `http://localhost:5000/api/admin/leave-requests/${id}`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      .then((response) => {
+        setLeaveRequests((prevRequests) =>
+          prevRequests.map((req) =>
+            req._id === id ? { ...req, status: newStatus } : req
+          )
+        );
+  
+        // Update the stats dynamically
+        setStats((prevStats) => {
+          return {
+            ...prevStats,
+            pendingRequests: prevStats.pendingRequests - 1,
+            approvedLeaves: newStatus === "Approved" ? prevStats.approvedLeaves + 1 : prevStats.approvedLeaves,
+            rejectedLeaves: newStatus === "Rejected" ? prevStats.rejectedLeaves + 1 : prevStats.rejectedLeaves,
+          };
+        });
+      })
+      .catch((error) => console.error("Error updating leave request:", error));
   };
+  
 
   return (
     <div className="d-flex">
       <AdminSidebar />
       <Container fluid className="mt-4" style={{ marginLeft: "300px" }}>
         <h2 className="mb-4 text-primary">Admin Dashboard</h2>
-        
+
         {/* Overview Section */}
         <Row className="mb-4">
           <Col md={3}>
@@ -67,10 +124,12 @@ const AdminDashboard = () => {
               </thead>
               <tbody>
                 {leaveRequests.map((request) => (
-                  <tr key={request.id}>
-                    <td>{request.name}</td>
-                    <td>{request.type}</td>
-                    <td>{request.date}</td>
+                  <tr key={request._id}>
+                    <td>{request.userId?.name || "Unknown"}</td>
+                    <td>{request.
+                      leaveType}</td>
+                    <td>{new Date(request.
+                      startDate).toLocaleDateString()}</td>
                     <td>
                       <span className={`badge bg-${request.status === "Approved" ? "success" : request.status === "Pending" ? "warning" : "danger"}`}>
                         {request.status}
@@ -79,10 +138,10 @@ const AdminDashboard = () => {
                     <td>
                       {request.status === "Pending" && (
                         <>
-                          <Button variant="success" size="sm" className="me-2" onClick={() => handleAction(request.id, "Approved")}>
+                          <Button variant="success" size="sm" className="me-2" onClick={() => handleAction(request._id, "Approved")}>
                             Approve
                           </Button>
-                          <Button variant="danger" size="sm" onClick={() => handleAction(request.id, "Rejected")}>
+                          <Button variant="danger" size="sm" onClick={() => handleAction(request._id, "Rejected")}>
                             Reject
                           </Button>
                         </>
@@ -100,4 +159,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-

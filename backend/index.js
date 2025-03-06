@@ -5,6 +5,8 @@ const cors = require("cors");
 const passport = require("passport");
 const authRoutes = require("./routes/authRoutes");
 const leaveRoutes = require("./routes/leaveRoutes");
+const Authadmin = require("./routes/Authadmin");
+const employeeRoutes = require("./routes/employeeRoutes");
 
 const app = express();
 
@@ -19,6 +21,9 @@ app.use(passport.initialize());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/leave", leaveRoutes);
+
+app.use("/api/admin", Authadmin);
+app.use("/api/employees", employeeRoutes);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
