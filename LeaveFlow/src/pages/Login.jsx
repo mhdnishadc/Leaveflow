@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { Form, Button, Container, Card } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { GoogleLogin } from "@react-oauth/google"; // Ensure this import is correct
-import { jwtDecode } from "jwt-decode";
+import { auth, provider, signInWithPopup } from "../Firebase"; // Ensure this import is correct
+import { FcGoogle } from "react-icons/fc"; // Import Google icon
 
 
 const Login = () => {
@@ -35,16 +35,18 @@ const Login = () => {
   };
 
   // Handle Google Authentication Response
-  const handleGoogleLoginSuccess = async (response) => {
+  const handleGooglelogin = async () => {
     try {
-      const decoded = jwtDecode(response.credential); // Decode the Google token
-      console.log("Google User Info:", decoded);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-      // Send Google user data to backend
-      const res = await axios.post("http://localhost:5000/api/auth/google/callback", {
-        name: decoded.name,
-        email: decoded.email,
-        googleId: decoded.sub, // Google ID
+      console.log("Google User:", user);
+
+      // Send user data to backend
+      const res = await axios.post("http://localhost:5000/api/auth/firebase-login", {
+        name: user.displayName,
+        email: user.email,
+        firebaseId: user.uid,
       });
 
       localStorage.setItem("token", res.data.token);
@@ -56,7 +58,7 @@ const Login = () => {
         navigate("/dashboard");
       }
     } catch (error) {
-      console.error("Google Authentication Failed", error);
+      console.error("Google Sign-In Failed", error);
     }
   };
 
@@ -93,11 +95,10 @@ const Login = () => {
         </Form>
 
         {/* Google Login Button */}
-        <div className="text-center mt-3">
-          <GoogleLogin
-            onSuccess={handleGoogleLoginSuccess}
-            onError={() => console.log("Google Login Failed")}
-          />
+        <div className="text-center mt-3 ms-5">
+          <button className="btn btn-success d-flex align-items-center gap-2" onClick={handleGooglelogin}>
+            <FcGoogle size={20} /> Sign in with Google
+          </button>
         </div>
 
         <p className="mt-3 text-center">

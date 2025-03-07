@@ -3,9 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const LeaveRequest = require("../models/LeaveRequest"); // Ensure this line is present
-const passport = require("passport");
 const cors = require("cors"); // Add this import
-require("../config/passport"); // Google Auth setup
 const authMiddleware = require("../middleware/authMiddleware"); 
 const multer = require("multer");
 const verifyToken = require("../middleware/authMiddleware");
@@ -58,27 +56,24 @@ router.post("/login", async (req, res) => {
   }
 });
  
-router.use(cors({ origin: "http://localhost:5173", credentials: true }));
-
-// Google OAuth Route
-router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-
-router.post("/google/callback", passport.authenticate("google", { session: false }), async (req, res) => {
-  const { name, email, id } = req.user;
+router.post("/firebase-login", async (req, res) => {
+  const { name, email, firebaseId } = req.body;
 
   try {
     let user = await User.findOne({ email });
 
     if (!user) {
-      user = new User({ name, email, googleId: id, role: "user" });
+      user = new User({ name, email, firebaseId, role: "user" });
       await user.save();
     }
 
+    // Generate JWT token
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
-    res.redirect(`http://localhost:5173/login?token=${token}&role=${user.role}`);
+    res.json({ token, role: user.role });
   } catch (error) {
-    res.status(500).json({ message: "Google Authentication failed" });
+    console.error("Firebase Authentication Error:", error);
+    res.status(500).json({ message: "Firebase Authentication failed" });
   }
 });
 

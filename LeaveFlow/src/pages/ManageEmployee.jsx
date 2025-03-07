@@ -64,7 +64,7 @@ const ManageEmployee = () => {
   const handleRemove = async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`);
-      setEmployees(employees.filter(emp => emp._id !== id)); // Fix: Use `_id` instead of `id`
+      setEmployees(employees.filter(emp => emp._id !== id)); 
     } catch (err) {
       console.error("Error removing employee", err);
     }
