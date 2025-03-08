@@ -19,8 +19,8 @@ import ManageEmployee from './pages/ManageEmployee';
 
 
 
-const App=()=> {
-  
+const App = () => {
+
 
   return (
     <Routes>
@@ -31,10 +31,10 @@ const App=()=> {
       <Route path="/apply-leave" element={<ApplyLeave />} />
       <Route path="/leave-status" element={<LeaveStatus />} />
       <Route path="/profile" element={<Profile />} />
-      <Route path="/admin-dashboard" element={<AdminDashboard/>} />
-      <Route path="/admin/manage-employee" element={<ManageEmployee/>} />
+      <Route path="/admin-dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/manage-employee" element={<ManageEmployee />} />
     </Routes>
-     
+
   )
 }
 
