@@ -24,19 +24,19 @@ jobs:
       # Step 3: Install backend dependencies
       - name: Install backend dependencies
         run: |
-          cd server
+          cd backend
           npm install
 
       # Step 4: Run backend tests (if any)
       - name: Run backend tests
         run: |
-          cd server
+          cd backend
           npm test || echo "No tests found"
 
       # Step 5: Install frontend dependencies
       - name: Install frontend dependencies
         run: |
-          cd client
+          cd LeaveFlow
           npm install
           npm run build
 
