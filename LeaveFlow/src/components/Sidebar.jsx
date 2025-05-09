@@ -19,10 +19,14 @@ const Sidebar = () => {
        navigate(path);
    }
    const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    localStorage.removeItem("userData");
-    localStorage.removeItem("userRole");
+     // Clear all localStorage items
+     localStorage.removeItem("token");
+     localStorage.removeItem("user");
+     localStorage.removeItem("userData");
+     localStorage.removeItem("userRole");
+     localStorage.removeItem("accessToken"); // Fixed spelling from "AcessToken" to "accessToken"
+     localStorage.removeItem("owner");
+     localStorage.removeItem("persist:root");
     navigate("/login");
   };
   return (

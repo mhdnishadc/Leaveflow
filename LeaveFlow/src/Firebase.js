@@ -6,19 +6,19 @@ import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyAXZC53LXdaQOT5JkvODtldWy1WGXghLQI",
-  authDomain: "leaveflowauth.firebaseapp.com",
-  projectId: "leaveflowauth",
-  storageBucket: "leaveflowauth.firebasestorage.app",
-  messagingSenderId: "19931580291",
-  appId: "1:19931580291:web:cb44ffaf9b1c2fbb43d8b6",
-  measurementId: "G-NF7PCCM9E6"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
- export const app = initializeApp(firebaseConfig);
- const auth = getAuth(app);
- const provider = new GoogleAuthProvider();
+export const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 export { auth, provider, signInWithPopup };
 // const analytics = getAnalytics(app);
